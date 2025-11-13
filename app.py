@@ -2,6 +2,7 @@
 import os
 from pathlib import Path
 from datetime import datetime, timedelta, date
+from zoneinfo import ZoneInfo
 
 import pandas as pd
 import streamlit as st
@@ -29,6 +30,16 @@ def _has_secrets() -> bool:
     return FIREBASE_CRED_PATH.exists() or ("firebase" in st.secrets)
 
 FIREBASE_ENABLED = _has_secrets()
+
+KST = ZoneInfo("Asia/Seoul")
+
+
+def now_kst() -> datetime:
+    return datetime.now(tz=KST)
+
+
+def now_kst_naive() -> datetime:
+    return now_kst().replace(tzinfo=None)
 
 
 def get_firestore_client():
@@ -140,7 +151,7 @@ def load_data() -> tuple[pd.DataFrame, str]:
         if c in df.columns:
             df[c] = pd.to_numeric(df[c], errors="coerce")
 
-    now = datetime.now()
+    now = now_kst_naive()
 
     def compute_status(row):
         begin = row.get("bidBeginDt")
@@ -193,7 +204,7 @@ def format_money(v):
 
 @st.dialog("입찰공고 상세", width="large")
 def show_detail_dialog(row: pd.Series):
-    now = datetime.now()
+    now = now_kst_naive()
     bid_begin = row.get("bidBeginDt")
     bid_close = row.get("bidClseDt")
 
@@ -286,7 +297,7 @@ def main():
                     last_date = last_collection_date or (
                         latest_bid_dt.date() if latest_bid_dt else None
                     )
-                    today = datetime.now().date()
+                    today = now_kst().date()
                     if last_date == today:
                         st.session_state["refresh_message"] = {
                             "type": "info",
@@ -336,7 +347,7 @@ def main():
     )
 
     # 기간/공고번호
-    today = datetime.today()
+    today = now_kst().date()
     default_start = today - timedelta(days=90)
 
     if inqry_div == "등록일시 기준":
@@ -505,7 +516,7 @@ def main():
 
     df_disp = filtered.copy()
 
-    now = datetime.now()
+    now = now_kst_naive()
     df_disp["기관명"] = df_disp["dminsttNm"].fillna("").replace("", pd.NA)
     df_disp["기관명"] = df_disp["기관명"].fillna(df_disp["ntceInsttNm"])
 
