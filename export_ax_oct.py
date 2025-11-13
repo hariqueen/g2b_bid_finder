@@ -39,7 +39,12 @@ def resolve_service_key() -> str | None:
 
 
 SERVICE_KEY = resolve_service_key()
-FIREBASE_CRED_PATH = Path("g2b-bid-finder-firebase-adminsdk-fbsvc-aae6f1c96d.json")
+FIREBASE_CRED_PATH = Path(
+    os.getenv(
+        "G2B_FIREBASE_CRED_PATH",
+        Path(__file__).resolve().parent / "g2b-bid-finder-firebase-adminsdk-fbsvc-aae6f1c96d.json",
+    )
+)
 FIREBASE_COLLECTION = "bid_pblanc_list"
 FIREBASE_META_COLLECTION = "meta"
 FIREBASE_META_DOC = "collection_state"
@@ -89,10 +94,15 @@ def test_keyword_filter(sample_items: list[dict], keyword: str) -> bool:
 
 
 def init_firestore():
-    if not FIREBASE_CRED_PATH.exists():
-        raise FileNotFoundError(f"Firebase 자격 증명 파일을 찾을 수 없습니다: {FIREBASE_CRED_PATH}")
+    if not FIREBASE_CRED_PATH.exists() and "firebase" not in getattr(__import__("streamlit"), "secrets", {}):
+        raise FileNotFoundError("Firebase 자격 증명을 찾을 수 없습니다. secrets 또는 JSON 경로를 확인하세요.")
     if not firebase_admin._apps:
-        cred = credentials.Certificate(FIREBASE_CRED_PATH)
+        if FIREBASE_CRED_PATH.exists():
+            cred = credentials.Certificate(str(FIREBASE_CRED_PATH))
+        else:
+            import streamlit as st
+
+            cred = credentials.Certificate(dict(st.secrets["firebase"]))
         firebase_admin.initialize_app(cred)
     return firestore.client()
 
