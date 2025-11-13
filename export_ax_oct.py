@@ -27,9 +27,9 @@ def resolve_service_key() -> str | None:
         return _decode_service_key(env_key)
 
     try:
-        import streamlit as st
+        from streamlit.runtime.secrets import get_secret_value
 
-        secret_key = st.secrets.get("G2B_SERVICE_KEY")
+        secret_key = get_secret_value("G2B_SERVICE_KEY")
         if secret_key:
             return _decode_service_key(secret_key)
     except Exception:
@@ -94,15 +94,24 @@ def test_keyword_filter(sample_items: list[dict], keyword: str) -> bool:
 
 
 def init_firestore():
-    if not FIREBASE_CRED_PATH.exists() and "firebase" not in getattr(__import__("streamlit"), "secrets", {}):
+    secrets_available = False
+    try:
+        from streamlit.runtime.secrets import get_secret_value
+
+        firebase_secret = get_secret_value("firebase")
+        secrets_available = firebase_secret is not None
+    except Exception:
+        secrets_available = False
+
+    if not FIREBASE_CRED_PATH.exists() and not secrets_available:
         raise FileNotFoundError("Firebase 자격 증명을 찾을 수 없습니다. secrets 또는 JSON 경로를 확인하세요.")
     if not firebase_admin._apps:
         if FIREBASE_CRED_PATH.exists():
             cred = credentials.Certificate(str(FIREBASE_CRED_PATH))
         else:
-            import streamlit as st
+            from streamlit.runtime.secrets import get_secret_value
 
-            cred = credentials.Certificate(dict(st.secrets["firebase"]))
+            cred = credentials.Certificate(dict(get_secret_value("firebase")))
         firebase_admin.initialize_app(cred)
     return firestore.client()
 
