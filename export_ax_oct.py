@@ -27,9 +27,9 @@ def resolve_service_key() -> str | None:
         return _decode_service_key(env_key)
 
     try:
-        from streamlit.runtime.secrets import get_secret_value
+        import streamlit as st
 
-        secret_key = get_secret_value("G2B_SERVICE_KEY")
+        secret_key = st.secrets.get("G2B_SERVICE_KEY")
         if secret_key:
             return _decode_service_key(secret_key)
     except Exception:
@@ -95,10 +95,11 @@ def test_keyword_filter(sample_items: list[dict], keyword: str) -> bool:
 
 def init_firestore():
     secrets_available = False
+    firebase_secret = None
     try:
-        from streamlit.runtime.secrets import get_secret_value
+        import streamlit as st
 
-        firebase_secret = get_secret_value("firebase")
+        firebase_secret = st.secrets.get("firebase")
         secrets_available = firebase_secret is not None
     except Exception:
         secrets_available = False
@@ -109,9 +110,7 @@ def init_firestore():
         if FIREBASE_CRED_PATH.exists():
             cred = credentials.Certificate(str(FIREBASE_CRED_PATH))
         else:
-            from streamlit.runtime.secrets import get_secret_value
-
-            cred = credentials.Certificate(dict(get_secret_value("firebase")))
+            cred = credentials.Certificate(dict(firebase_secret))
         firebase_admin.initialize_app(cred)
     return firestore.client()
 
