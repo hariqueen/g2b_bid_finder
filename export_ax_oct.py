@@ -15,8 +15,26 @@ from firebase_admin import credentials, firestore
 
 BASE_URL = "https://apis.data.go.kr/1230000/ad/BidPublicInfoService/getBidPblancListInfoServcPPSSrch"
 load_dotenv()
-raw_service_key = os.getenv("G2B_SERVICE_KEY") 
-SERVICE_KEY = unquote(raw_service_key) if raw_service_key else None
+
+
+def resolve_service_key() -> str | None:
+    env_key = os.getenv("G2B_SERVICE_KEY")
+    if env_key:
+        return unquote(env_key)
+
+    try:
+        import streamlit as st
+
+        secret_key = st.secrets.get("G2B_SERVICE_KEY")
+        if secret_key:
+            return unquote(secret_key)
+    except Exception:
+        pass
+
+    return None
+
+
+SERVICE_KEY = resolve_service_key()
 FIREBASE_CRED_PATH = Path("g2b-bid-finder-firebase-adminsdk-fbsvc-aae6f1c96d.json")
 FIREBASE_COLLECTION = "bid_pblanc_list"
 FIREBASE_META_COLLECTION = "meta"
