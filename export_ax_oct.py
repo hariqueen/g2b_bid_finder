@@ -17,17 +17,21 @@ BASE_URL = "https://apis.data.go.kr/1230000/ad/BidPublicInfoService/getBidPblanc
 load_dotenv()
 
 
+def _decode_service_key(key: str) -> str:
+    return unquote(key) if "%" in key else key
+
+
 def resolve_service_key() -> str | None:
     env_key = os.getenv("G2B_SERVICE_KEY")
     if env_key:
-        return unquote(env_key)
+        return _decode_service_key(env_key)
 
     try:
         import streamlit as st
 
         secret_key = st.secrets.get("G2B_SERVICE_KEY")
         if secret_key:
-            return unquote(secret_key)
+            return _decode_service_key(secret_key)
     except Exception:
         pass
 
