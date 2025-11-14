@@ -1,49 +1,49 @@
 
-# 나라장터 용역 입찰공고 모니터링 대시보드 (Streamlit)
+# 나라장터 용역 입찰공고 모니터링 대시보드
 
-이 프로젝트는 `getBidPblancListInfoServc` API로 수집한 입찰공고 데이터를
-Firebase(DB)에 적재해 두었다는 가정하에,
-해당 데이터를 조회·필터링·열람하는 내부용 대시보드 예제입니다.
+- 내부 사업 기획용 실시간 용역 입찰공고 모니터링 Streamlit 대시보드
+- Firestore 적재 공고 메타데이터 기반 필터링·정렬·상세 열람 흐름
+- KST 기준 증분 업서트를 수행하는 G2B 수집 스크립트
+- 운영 인스턴스: `https://g2b-bid-finder-wvd372mhbn8kmegqeafk9y.streamlit.app/`
 
-현재 코드는 **샘플 CSV(`sample_data.csv`)** 를 사용하도록 되어 있으므로,
-Firebase 연동 전까지는 그대로 실행해서 화면 구조를 확인할 수 있습니다.
+## 주요 기능
 
-## 실행 방법
+- **데이터 수집 자동화**: G2B API 구간별 호출 및 Firestore 업서트를 수행하는 `export_ax_oct.py` 파이프라인
+- **상세 분석 UI**: 공고 상태·재공고 여부·예산 지표·마감까지 남은 시간 확인을 위한 요약 카드와 리스트/다이얼로그 구성
+- **고급 필터링**: 등록일시/공고번호 기준 조회, 예산 하한, 공고명 키워드, 기관명, 재공고 여부, 상태 조건 제공
+- **첨부파일 접근성**: 공고별 규격서·첨부파일 링크 및 담당자 연락처 통합 노출
 
-```bash
-pip install -r requirements.txt
-streamlit run app.py
-```
+## 시스템 개요
 
-## Firebase와 연동하려면
+- **수집 파이프라인**: KST 기준 마지막 `bidNtceDt` 이후 구간 증분 요청과 Firestore `bid_pblanc_list`·`meta.collection_state` 갱신 흐름
+- **대시보드**: Firestore 데이터 캐싱 조회 후 Streamlit 컴포넌트로 목록·상세 뷰를 제공하는 `app.py`
+- **주요 스키마**: 공고 메타데이터(`bidNtceNm`, `asignBdgtAmt`, `presmptPrce`, `reNtceYn` 등), 일정 정보(`bidNtceDt`, `bidBeginDt`, `bidClseDt`, `bidQlfctRgstDt`), 담당자/첨부파일, 식별자(`untyNtceNo`, `bidNtceNo`)
 
-1. `load_data()` 함수 내부를 수정하여
-   Firebase Firestore 또는 Realtime Database에서 데이터를 읽어오도록 변경합니다.
-2. 컬럼 스키마는 다음과 같이 맞춰 주면 됩니다.
+## 운영 가이드
 
-- 공고기관명: `ntceInsttNm`
-- 수요기관명: `dminsttNm`
-- 입찰공고명: `bidNtceNm`
-- 배정예산금액: `asignBdgtAmt`
-- 추정가격: `presmptPrce`
-- 재공고여부: `reNtceYn` (Y/N)
-- 입찰공고일시: `bidNtceDt`
-- 입찰개시일시: `bidBeginDt`
-- 입찰마감일시: `bidClseDt`
-- 공고기관담당자명: `ntceInsttOfclNm`
-- 집행관명(담당자명 대체용): `exctvNm`
-- 공고기관담당자전화번호: `ntceInsttOfclTelNo`
-- 입찰참가자격등록마감일시: `bidQlfctRgstDt`
-- 공고규격서 URL/파일명: `ntceSpecDocUrl1~10`, `ntceSpecFileNm1~10`
-- 입찰공고상세URL: `bidNtceDtlUrl`
-- 입찰공고URL: `bidNtceUrl`
-- 통합공고번호: `untyNtceNo`
-- 입찰공고번호: `bidNtceNo`
+- 서비스 키 및 Firebase 자격 증명 비공개 저장, Streamlit secrets 활용 권장
 
-## 화면 구성 요약
+## English Summary
 
-- 좌측 사이드바: 조회 기준, 기간/공고번호, 예가, 키워드, 기관, 재공고 여부, 상태 필터
-- 상단: 검색 결과 요약 (공고 수, 평균/최대 예가, 재공고 비율)
-- 중앙: 입찰공고 목록 테이블
-- 하단: 선택 공고 상세 정보 + 첨부파일 링크 + 상세 URL
+- Streamlit dashboard for the business planning and sales team to monitor service bid notices collected via the `getBidPblancListInfoServc` API
+- Filtering, sorting, and detailed inspection workflows powered by Firestore-stored bid metadata
+- G2B harvesting script that performs KST-based incremental upserts
+- Production instance: `https://g2b-bid-finder-wvd372mhbn8kmegqeafk9y.streamlit.app/`
+
+### Key Features
+
+- **Automated harvesting**: `export_ax_oct.py` pipeline that batches G2B API calls and upserts results into Firestore
+- **Analytical UI**: summary cards and list/dialog views exposing bid status, re-announcement flags, budget metrics, and remaining time
+- **Advanced filters**: query options for registration datetime, notice ID, budget threshold, title keyword, organization, re-announcement flag, and status
+- **Attachment access**: consolidated display of specification files and stakeholder contact information per notice
+
+### Architecture Overview
+
+- **Ingestion pipeline**: incremental requests after the latest `bidNtceDt` in KST and updates to Firestore `bid_pblanc_list` / `meta.collection_state`
+- **Dashboard layer**: `app.py` retrieving and caching Firestore data before rendering Streamlit list/detail components
+- **Core schema**: bid metadata (`bidNtceNm`, `asignBdgtAmt`, `presmptPrce`, `reNtceYn`, etc.), schedule fields (`bidNtceDt`, `bidBeginDt`, `bidClseDt`, `bidQlfctRgstDt`), contacts/attachments, identifiers (`untyNtceNo`, `bidNtceNo`)
+
+### Operations Guidance
+
+- Secure storage of service keys and Firebase credentials with Streamlit secrets recommended
 
