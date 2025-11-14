@@ -210,9 +210,9 @@ def show_detail_dialog(row: pd.Series):
 
     st.write(f"입찰공고일시: {row.get('bidNtceDt', '-')}")
     if pd.notna(bid_begin):
-        st.write(f"입찰개시일시: {bid_begin}")
+        st.write(f"개찰일시: {bid_begin}")
     else:
-        st.write("입찰개시일시: -")
+        st.write("개찰일시: -")
 
     if pd.notna(bid_close):
         st.write(f"입찰마감일시: {bid_close}")
