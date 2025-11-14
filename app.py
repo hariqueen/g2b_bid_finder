@@ -374,14 +374,6 @@ def main():
                     last_date = last_collection_date or (
                         latest_bid_dt.date() if latest_bid_dt else None
                     )
-                    today = now_kst().date()
-                    if last_date == today:
-                        st.session_state["refresh_message"] = {
-                            "type": "info",
-                            "text": f"현재 최신 데이터입니다. 마지막 업데이트 날짜: {last_date.strftime('%Y-%m-%d')}",
-                        }
-                        st.rerun()
-
                     try:
                         result = collect_and_upsert(verbose=False)
                     except Exception as exc:
@@ -390,7 +382,10 @@ def main():
                             "text": f"데이터 수집에 실패했습니다: {exc}",
                         }
                     else:
-                        if result["upserted_records"] == 0:
+                        cleanup_removed = result.get("cleanup_removed", 0)
+                        upserted = result.get("upserted_records", 0)
+
+                        if upserted == 0 and cleanup_removed == 0:
                             msg_date = (
                                 last_date.strftime("%Y-%m-%d")
                                 if last_date
@@ -437,9 +432,17 @@ def main():
                                 if start_str and end_str
                                 else ""
                             )
+                            cleanup_suffix = (
+                                f", 중복 {cleanup_removed}건 정리"
+                                if cleanup_removed
+                                else ""
+                            )
+                            upsert_suffix = (
+                                f"{upserted}건 반영" if upserted else "신규 반영 없음"
+                            )
                             st.session_state["refresh_message"] = {
                                 "type": "success",
-                                "text": f"{collected_str} 수집 완료 - {result['upserted_records']}건 반영{range_suffix}",
+                                "text": f"{collected_str} 수집 완료 - {upsert_suffix}{cleanup_suffix}{range_suffix}",
                             }
                         st.cache_data.clear()
                     st.rerun()
@@ -528,11 +531,15 @@ def main():
 
     # 상태 필터
     st.sidebar.subheader("입찰 상태")
-    status_opt = st.sidebar.selectbox(
-        "입찰 상태 필터",
-        options=["전체", "입찰 전", "진행중", "마감", "정보 부족"],
-        index=0,
-    )
+    col_status_filter, col_status_opts = st.sidebar.columns([1, 1])
+    with col_status_filter:
+        status_opt = st.selectbox(
+            "입찰 상태",
+            options=["전체", "입찰 전", "진행중", "마감", "정보 부족"],
+            index=0,
+        )
+    with col_status_opts:
+        exclude_closed = st.checkbox("마감 제외", value=True)
 
     st.sidebar.markdown("---")
     apply_filter = st.sidebar.button("검색 적용")
@@ -584,6 +591,8 @@ def main():
     # 상태 필터
     if status_opt != "전체":
         filtered = filtered[filtered["status"] == status_opt]
+    if exclude_closed and "status" in filtered.columns:
+        filtered = filtered[filtered["status"] != "마감"]
 
     # ===== 입찰공고 목록 테이블 =====
     total_count = len(filtered)
